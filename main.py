@@ -40,39 +40,51 @@ def check_winner(r,c,board):
 
    return False
 
+def is_game_over(r,c,board,cols_height,player):
+    if (check_winner(r,c,board)): return 1 if player else 2
+    else: 
+        draw = True
+        for i in board:
+            if i.count('.') != 0:
+                draw = False
+                break
+        if draw: return 0
+    return -1
+
+def legal_moves(cols_height):
+    legal_mv = []
+    for i in range(7):
+        if cols_height[i] < 6 : legal_mv.append(i)
+    return legal_mv
+
+def drop(c,board,cols_height,player):
+    r = 5 - cols_height[c] 
+    board[r][c] = 'R' if player else 'Y'
+    cols_height[c] += 1
+    return [r,c]
+
+def undo_drop(r,c,board,cols_height):
+    board[r][c] = '.'
+    cols_height[c] -= 1
+
 board = [["." for _ in range(7)] for _ in range (6)]
 cols_height = [0,0,0,0,0,0,0]
 player = True
-win = 0
-while (True):
-    draw = True
-    for i in board:
-        if i.count('.') != 0:
-            draw = False
-            break
-
-    if draw: break
-        
+# Player -> True -> Red -> Human
+# Player -> False -> Yellow -> AI
+while (True):    
     col = int(input("Column: "))
     while (col < 1 or col > 7 or cols_height[col - 1] == 6):
         if (1 <= col <= 7 and cols_height[col - 1] == 6): print("Column-", col, " is full !!") 
         print("Invalid Move !! Try again !!")
         col = int(input("Column: "))
-    c = col - 1
-    r = 5 - cols_height[c] 
-    board[r][c] = 'R' if player else 'Y'
-    cols_height[c] += 1
+    r,c = drop(col - 1,board,cols_height,player)
     for i in range(6):
         print(board[i])
-    if (check_winner(r,c,board)):
-        win = 1 if player else 2
+    n = is_game_over(r,c,board,cols_height,player) 
+    if n != -1:
+        if n == 0: print("Draw !!")
+        elif n == 1: print("R is the winner !!")
+        elif n == 2: print("Y is the winner !!")
         break
     player = not player
-
-match win:
-    case 0:
-        print("Draw !!")
-    case 1:
-        print("R is the winner !!")
-    case 2:
-        print("Y is the winner !!")
