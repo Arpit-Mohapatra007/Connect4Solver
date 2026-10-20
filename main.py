@@ -47,7 +47,7 @@ def is_game_over(r,c,board,cols_height,player):
 
 def legal_moves(cols_height):
     legal_mv = []
-    for i in range(7):
+    for i in [3,2,4,1,5,0,6]:
         if cols_height[i] < 6 : legal_mv.append(i)
     return legal_mv
 
@@ -87,7 +87,7 @@ def scorer(board,windows,cols_height):
     return score
 
 
-def minimax(depth,board,windows,cols_height,player):
+def minimax(depth,alpha,beta,board,windows,cols_height,player):
     if depth == 0 : return scorer(board,windows,cols_height)
     legal_mv = legal_moves(cols_height)
     if player:
@@ -100,9 +100,11 @@ def minimax(depth,board,windows,cols_height,player):
                 if n == 0: return 0
                 elif n == 1: return -100000 * depth
                 elif n == 2: return 100000  * depth
-            score = minimax(depth - 1,board,windows,cols_height,not player)
+            score = minimax(depth - 1,alpha,beta,board,windows,cols_height,not player)
             value = min(value, score)
+            beta = min(beta, value)
             undo_drop(r,c,board,cols_height)
+            if alpha >= beta : break
     else:
         value = -float("inf")
         for move in legal_mv:
@@ -113,9 +115,11 @@ def minimax(depth,board,windows,cols_height,player):
                 if n == 0: return 0
                 elif n == 1: return -100000 * depth
                 elif n == 2: return 100000  * depth
-            score = minimax(depth - 1,board,windows,cols_height, not player)
+            score = minimax(depth - 1,alpha,beta,board,windows,cols_height, not player)
             value = max(value, score)
+            alpha = max(alpha, value)
             undo_drop(r,c,board,cols_height)
+            if alpha >= beta : break
     return value
 
 def best_move(depth_config,board,windows,cols_height):
@@ -131,7 +135,7 @@ def best_move(depth_config,board,windows,cols_height):
         elif n == 0:
             undo_drop(r,c,board,cols_height)
             continue
-        score = minimax(depth_config - 1,board,windows,cols_height,True)
+        score = minimax(depth_config - 1,-float("inf"),float("inf"),board,windows,cols_height,True)
         undo_drop(r,c,board,cols_height)
         if score > best_score: 
             best_mv = move
@@ -176,7 +180,7 @@ player = True
 # Player -> True -> Red -> Human
 # Player -> False -> Yellow -> AI
 windows = generate_windows()
-depth_config = 4
+depth_config = 6
 while (True):
     if player :
         col = int(input("Column: "))
