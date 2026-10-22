@@ -5,7 +5,7 @@ import os
 windows = []
 app = Flask(__name__)
 CORS(app)
-depth_config = 8
+depth_config = 6
 
 def check_winner(r,c,board):
    l1 = max(0, r - 3)
