@@ -1,5 +1,6 @@
 from flask import Flask, request
 from flask_cors import CORS
+import os
 
 windows = []
 app = Flask(__name__)
@@ -287,4 +288,4 @@ def response():
 
 if __name__ == "__main__":
     windows = generate_windows()
-    app.run()
+    app.run(host="0.0.0.0",port=int(os.environ.get("PORT", 5000)))
