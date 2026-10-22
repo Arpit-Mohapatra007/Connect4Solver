@@ -13,7 +13,7 @@ Array.from(document.getElementsByClassName("col")).forEach(target => {
 		document.getElementById('turn').textContent = "AI turn...";
 		piece.className = 'piece';
 		cell.appendChild(piece);
-		const response = await fetch('http://127.0.0.1:5000/api',{
+		const response = await fetch(`${import.meta.env.API}/api`,{
 			method: 'POST',
 			headers: {
 				'Content-Type':'application/json'
