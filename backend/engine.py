@@ -1,3 +1,11 @@
+from flask import Flask, request
+from flask_cors import CORS
+
+windows = []
+app = Flask(__name__)
+CORS(app)
+depth_config = 8
+
 def check_winner(r,c,board):
    l1 = max(0, r - 3)
    l2 = min(5, r + 3)
@@ -174,7 +182,7 @@ def generate_windows():
             windows.append(window_coord)
     return windows
 
-board = [["." for _ in range(7)] for _ in range (6)]
+'''board = [["." for _ in range(7)] for _ in range (6)]
 cols_height = [0,0,0,0,0,0,0]
 player = True
 # Player -> True -> Red -> Human
@@ -200,4 +208,83 @@ while (True):
         elif n == 1: print("R is the winner !!")
         elif n == 2: print("Y is the winner !!")
         break
-    player = not player
+    player = not player '''
+
+def game(col,depth_config,windows,board,cols_height,response):
+    r_h,c_h = drop(col - 1, board, cols_height, True)
+    n_h = is_game_over(r_h, c_h, board, cols_height, True)
+    response["human_piece"] = [r_h, c_h]
+    response["game_status"] = n_h
+    response["cols_height_human"] = cols_height
+
+    if n_h == -1:
+        ai_col = best_move(depth_config, board, windows, cols_height)
+        r_a,c_a = drop(ai_col - 1, board, cols_height, False)
+        n_a = is_game_over(r_a, c_a, board, cols_height, False)
+        response["ai_piece"] = [r_a, c_a]
+        response["game_status_now"] = n_a
+        response["cols_height_ai"] = cols_height
+    else:
+        response["game_status_now"] = n_h
+        response["cols_height_ai"] = cols_height
+
+    return response
+
+def generate_response(col,depth_config,windows,board):
+    cols_height = [0,0,0,0,0,0,0]
+    response = {
+        "status" : 200,
+        "human_piece" : [-1,-1],
+        "game_status" : -1,
+        "cols_height_human" : cols_height,
+        "ai_piece": [-1, -1],
+        "game_status_now": -1,
+        "cols_height_ai": cols_height
+    }
+    if (type(col) != int)  or (col < 1 or col > 7):
+        response["status"] = 602
+        return response
+    elif (1<= col <= 7 and cols_height[col-1] == 6) :
+        response["status"] = 601
+        return response
+    else :
+        count = 0
+        response["status"] = 200
+        for r in range(6):
+            for c in range(7):
+                if board[r][c] != '.':
+                    if (board[r][c] not in ['R','Y']) or (r < 5 and board[r + 1][c] == '.'):
+                        response["status"] = 603
+                        return response
+                    count = count + 1 if board[r][c] == 'R' else count - 1
+                    cols_height[c] += 1
+        if cols_height.count(6) == 7 : 
+            response["status"] = 604
+            return response
+        elif count != 0:
+            response["status"] = 605
+            return response
+        for window_coord in windows:
+            window = [board[coord[0]][coord[1]] for coord in window_coord]
+            if window.count('R') == 4 or window.count('Y') == 4:
+                response["status"] = 606
+                return response
+        return game(col,depth_config,windows,board,cols_height,response)
+
+
+
+@app.route("/")
+def root():
+    return "Live"
+
+@app.route("/api", methods=['POST'])
+def response():
+    data = request.get_json()
+    if data is None : return {"error" : "Invalid or missing JSON"}, 400
+    col = data.get("col_num")
+    board = data.get("board")
+    return generate_response(col,depth_config,windows,board)
+
+if __name__ == "__main__":
+    windows = generate_windows()
+    app.run()
