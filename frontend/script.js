@@ -13,7 +13,7 @@ Array.from(document.getElementsByClassName("col")).forEach(target => {
 		document.getElementById('turn').textContent = "AI turn...";
 		piece.className = 'piece';
 		cell.appendChild(piece);
-		const response = await fetch(`${import.meta.env.API}/api`,{
+		const response = await fetch('https://connect4solver.onrender.com/api',{
 			method: 'POST',
 			headers: {
 				'Content-Type':'application/json'
