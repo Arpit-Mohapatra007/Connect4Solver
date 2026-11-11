@@ -211,6 +211,8 @@ while (True):
         break
     player = not player '''
 
+windows = generate_windows()
+
 def game(col,depth_config,windows,board,cols_height,response):
     r_h,c_h = drop(col - 1, board, cols_height, True)
     n_h = is_game_over(r_h, c_h, board, cols_height, True)
@@ -231,7 +233,16 @@ def game(col,depth_config,windows,board,cols_height,response):
 
     return response
 
-def generate_response(col,depth_config,windows,board):
+def ai_opening(depth_config,windows,board,cols_height,response):
+    ai_col = best_move(depth_config, board, windows, cols_height)
+    r_a,c_a = drop(ai_col - 1, board, cols_height, False)
+    n_a = is_game_over(r_a, c_a, board, cols_height, False)
+    response["ai_piece"] = [r_a, c_a]
+    response["game_status_now"] = n_a
+    response["cols_height_ai"] = cols_height
+    return response
+
+def generate_response(col,depth_config,windows,board,human_first):
     cols_height = [0,0,0,0,0,0,0]
     response = {
         "status" : 200,
@@ -242,35 +253,45 @@ def generate_response(col,depth_config,windows,board):
         "game_status_now": -1,
         "cols_height_ai": cols_height
     }
-    if (type(col) != int)  or (col < 1 or col > 7):
+    # col is None -> "AI goes first" opening request on an empty board
+    opening = col is None
+    if not opening and ((type(col) != int) or (col < 1 or col > 7)):
         response["status"] = 602
         return response
-    elif (1<= col <= 7 and cols_height[col-1] == 6) :
+
+    count = 0
+    for r in range(6):
+        for c in range(7):
+            if board[r][c] != '.':
+                if (board[r][c] not in ['R','Y']) or (r < 5 and board[r + 1][c] == '.'):
+                    response["status"] = 603
+                    return response
+                count = count + 1 if board[r][c] == 'R' else count - 1
+                cols_height[c] += 1
+
+    for window_coord in windows:
+        window = [board[coord[0]][coord[1]] for coord in window_coord]
+        if window.count('R') == 4 or window.count('Y') == 4:
+            response["status"] = 606
+            return response
+
+    if opening:
+        if human_first or count != 0:
+            response["status"] = 602
+            return response
+        return ai_opening(depth_config,windows,board,cols_height,response)
+
+    if cols_height[col - 1] == 6:
         response["status"] = 601
         return response
-    else :
-        count = 0
-        response["status"] = 200
-        for r in range(6):
-            for c in range(7):
-                if board[r][c] != '.':
-                    if (board[r][c] not in ['R','Y']) or (r < 5 and board[r + 1][c] == '.'):
-                        response["status"] = 603
-                        return response
-                    count = count + 1 if board[r][c] == 'R' else count - 1
-                    cols_height[c] += 1
-        if cols_height.count(6) == 7 : 
-            response["status"] = 604
-            return response
-        elif count != 0:
-            response["status"] = 605
-            return response
-        for window_coord in windows:
-            window = [board[coord[0]][coord[1]] for coord in window_coord]
-            if window.count('R') == 4 or window.count('Y') == 4:
-                response["status"] = 606
-                return response
-        return game(col,depth_config,windows,board,cols_height,response)
+    if cols_height.count(6) == 7:
+        response["status"] = 604
+        return response
+    # parity: human-first -> equal R/Y; AI-first -> AI (Y) leads by one
+    if count != (0 if human_first else -1):
+        response["status"] = 605
+        return response
+    return game(col,depth_config,windows,board,cols_height,response)
 
 
 
@@ -284,7 +305,12 @@ def response():
     if data is None : return {"error" : "Invalid or missing JSON"}, 400
     col = data.get("col_num")
     board = data.get("board")
-    return generate_response(col,depth_config,windows,board)
+    depth = data.get("depth")
+    if not isinstance(depth, int):
+        depth = depth_config
+    depth = max(1, min(8, depth))
+    human_first = bool(data.get("human_first", True))
+    return generate_response(col,depth,windows,board,human_first)
 
 if __name__ == "__main__":
     windows = generate_windows()
